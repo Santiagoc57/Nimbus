@@ -173,3 +173,13 @@ Las sondas `*Probe.swift` y `*Smoke.swift` usan una cuenta real y archivos sint�
 ## Licencia
 
 Pendiente de definir por el autor.
+
+## Nombre de cada cuenta en la barra lateral de Finder
+
+En macOS 27, Finder ignora el nombre que Nimbo pasa al añadir un favorito y muestra la carpeta de la cuenta como «Nimbo» o «Nimbo - …». El truco: el favorito apunta a un **enlace simbólico con el nombre de la cuenta** (`~/Library/Application Support/Nimbo/Sidebar/<nombre>` → `~/Library/CloudStorage/Nimbo-…`), y Finder muestra el nombre del enlace. Funciona también en macOS 14.
+
+Nimbo lo hace solo al conectar cada cuenta (`NimboFinderIcon.addToSidebar`). Para aplicarlo a mano en un Mac con una versión anterior:
+
+```bash
+zsh scripts/finder-sidebar-names.sh
+```
