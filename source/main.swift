@@ -2521,6 +2521,13 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableViewD
         let value = alias.trimmingCharacters(in: .whitespacesAndNewlines)
         if value.isEmpty || value == remote { UserDefaults.standard.removeObject(forKey: aliasKey(remote)) }
         else { UserDefaults.standard.set(value, forKey: aliasKey(remote)) }
+        // Rename the account's Finder favorite right away.
+        let connected = remote == "GoogleDrive" ? nativeController : accountNativeControllers[remote]
+        if let controller = connected {
+            Task { if let url = try? await controller.client.location() { await MainActor.run {
+                NimboFinderIcon.addToSidebar(url, name: self.displayName(for: remote), remote: remote, force: true)
+            } } }
+        }
     }
     private func rowLabel(_ text: String, size: CGFloat = 13, bold: Bool = false) -> NSTextField {
         let value = NSTextField(labelWithString: text); value.font = .systemFont(ofSize: size, weight: bold ? .semibold : .regular); value.lineBreakMode = .byTruncatingTail; return value
