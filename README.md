@@ -53,7 +53,8 @@ Todo corre en tu Mac. Nimbo no tiene servidores propios: habla directo con la AP
 | | |
 |---|---|
 | **Inicio** | Espacio libre total, una tarjeta por cuenta (estado, uso, lo descargado en este Mac), carpetas «Siempre disponibles», actividad reciente y «Para revisar». |
-| **Varias cuentas** | Personal, trabajo, clientes… cada una con su alias y su carpeta, sin mezclarse. Pueden ser de sólo lectura o con permiso de escritura. |
+| **Varias cuentas** | Personal, trabajo, clientes… cada una con el nombre que elijas (por ejemplo «🏀 B A S Q U E T») y su propia carpeta en Finder, sin mezclarse. Pueden ser de sólo lectura o con permiso de escritura. |
+| **Ícono por cuenta** | Elegí símbolo (nube, básquet, trabajo, casa, cámara…) y color: se usa en la carpeta de Finder y en Nimbo. |
 | **Búsqueda** | Por nombre, ruta, fecha y tamaño en todas las cuentas, sin descargar. Atajo global **⌃⌥Espacio**. |
 | **Liberar espacio** | Automático por días sin uso, un botón «Liberar lo que no usé en 30 días» y un **límite de espacio** en el Mac (10–250 GB). Nunca toca lo que conservás sin conexión. |
 | **Pausar** | Desde el menú: 1 hora, 3 horas o hasta mañana. Finder sigue mostrando todo; las transferencias esperan. |
@@ -162,6 +163,7 @@ Las sondas `*Probe.swift` y `*Smoke.swift` usan una cuenta real y archivos sint�
 - Firmado ad hoc, sin notarización de Apple: la primera vez hay que abrirlo con clic derecho → Abrir (ver la guía de instalación).
 - Sólo Google Drive. Los Documentos, Hojas y Presentaciones de Google se abren en el navegador.
 - Las versiones anteriores de un archivo dividido siguen ocupando espacio en Drive después de editarlo.
+- macOS arma el nombre de cada ubicación como «Nimbo - <nombre de la cuenta>» y no permite cambiar el ícono de la barra lateral para servicios de tipo File Provider.
 
 ## Créditos
 

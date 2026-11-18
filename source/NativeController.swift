@@ -224,11 +224,12 @@ final class NativeController:NSObject {
             self.applyLinkActions()
             // Filled cloud on this account's Finder folder (sidebar and windows).
             Task { if let url = try? await self.client.location() { await MainActor.run {
-                NimboFinderIcon.apply(to: url)
+                NimboFinderIcon.apply(to: url, remote: self.client.remoteName)
                 // Finder sidebar: "Mi Google Drive" / "Cuenta 2" with a cloud, not the folder name.
                 var name = self.client.domain.displayName.replacingOccurrences(of: "Google Drive · ", with: "")
+                if name.hasPrefix("Google Drive") && name != "Google Drive" { name = String(name.dropFirst("Google Drive".count)).trimmingCharacters(in: .whitespaces) }
                 if name == "GoogleDrive" || name.isEmpty { name = "Mi Google Drive" }
-                NimboFinderIcon.addToSidebar(url, name: name)
+                NimboFinderIcon.addToSidebar(url, name: name, remote: self.client.remoteName)
             } } }
             return writable ? "Google Drive conectado con sincronización. Los cambios de Finder se suben a la nube." : "Google Drive conectado en modo de lectura. Activá Permitir sincronización en Cuenta de Google Drive para subir cambios."
         }

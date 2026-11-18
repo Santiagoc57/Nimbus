@@ -175,6 +175,11 @@ enum NimboUI {
         }
     }
     static func driveTileImage(size: CGFloat = 22) -> NSImage { toolTile("cloud.fill", color: NimboPalette.driveDeep, size: size) }
+    /// The account's own symbol and colour (chosen with «Ícono…»).
+    static func accountTileImage(_ remote: String, size: CGFloat = 22) -> NSImage {
+        let style = NimboFinderIcon.style(for: remote)
+        return toolTile(style.symbol, color: NimboPalette.rgb(style.color), size: size)
+    }
     static func button(_ title: String, primary: Bool = false, target: AnyObject?, action: Selector?) -> NSButton {
         let b = NSButton(title: title, target: target, action: action)
         b.bezelStyle = .rounded; b.controlSize = .regular
@@ -380,10 +385,11 @@ enum NimboEmbedding {
 
 extension NimboFinderIcon {
     /// Adds the account folder to Finder's Favorites with its own name and a cloud.
-    static func addToSidebar(_ folder: URL, name: String) {
+    static func addToSidebar(_ folder: URL, name: String, remote: String? = nil, force: Bool = false) {
+        let symbol = remote.map { style(for: $0).symbol } ?? "cloud.fill"
         let key = "NimboSidebarFavorite." + folder.path
-        guard UserDefaults.standard.string(forKey: key) != name else { return }
-        NimboSetFinderFavorite(folder as CFURL, name as CFString, sidebarIconFile() as CFURL?)
-        UserDefaults.standard.set(name, forKey: key)
+        guard force || UserDefaults.standard.string(forKey: key) != name + "|" + symbol else { return }
+        NimboSetFinderFavorite(folder as CFURL, name as CFString, sidebarIconFile(symbol: symbol) as CFURL?)
+        UserDefaults.standard.set(name + "|" + symbol, forKey: key)
     }
 }

@@ -220,7 +220,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableViewD
             }
             syncController?.needsAuthorization = { [weak self] in self?.showConnect(); self?.writeAccess.state = .on }
         } catch { showError("No se pudo cargar la sincronización: " + error.localizedDescription) }
-        nativeController = NativeController(config:config, client:NativeClient(name:"Google Drive · " + alias(for: "GoogleDrive")))
+        nativeController = NativeController(config:config, client:NativeClient(name: displayName(for: "GoogleDrive")))
         if let nativeController { accountNativeControllers["GoogleDrive"] = nativeController }
         activityController = ActivityController(file: support.appendingPathComponent("Activity.json"))
         activityController?.transfersView = { [weak self] in
@@ -1019,7 +1019,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableViewD
         for remote in remotesInSidebar {
             let button = sidebarButton("  " + displayName(for: remote), symbol: "cloud.fill", action: #selector(selectSidebarAccount(_:)))
             // Tile drawn 10 pt higher so it lines up with the lifted title.
-            let tile = NimboUI.driveTileImage(size: 22)
+            let tile = NimboUI.accountTileImage(remote, size: 22)
             button.image = NSImage(size: NSSize(width: 30, height: 32), flipped: false) { _ in tile.draw(in: NSRect(x: 8, y: 10, width: 22, height: 22)); return true }
             button.identifier = NSUserInterfaceItemIdentifier(remote)
             button.toolTip = displayName(for: remote) + " · " + (dates[remote] == nil ? "catálogo por actualizar" : "\(entries.lazy.filter { $0.remote == remote }.count) elementos en catálogo")
@@ -1259,7 +1259,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableViewD
     }
     private func accountCard(_ remote: String) -> NSView {
         let state = accountStatus(remote)
-        let tile = NSImageView(image: NimboUI.driveTileImage(size: 40))
+        let tile = NSImageView(image: NimboUI.accountTileImage(remote, size: 40))
         tile.widthAnchor.constraint(equalToConstant: 40).isActive = true; tile.heightAnchor.constraint(equalToConstant: 40).isActive = true
         let name = NimboUI.text(displayName(for: remote), size: 15, weight: .semibold)
         let titles = NimboUI.vstack([name, NimboUI.status(state.text, state.status)], spacing: 4, fill: false)
@@ -1295,8 +1295,11 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableViewD
         finder.toolTip = "Abre la carpeta de esta cuenta en Finder. Ahí sincronizás o liberás con clic derecho."
         let browse = NimboUI.button("Explorar", target: self, action: #selector(selectSidebarAccount(_:)))
         browse.identifier = NSUserInterfaceItemIdentifier(remote)
+        let iconButton = NimboUI.button("Ícono…", target: self, action: #selector(chooseAccountIcon(_:)))
+        iconButton.identifier = NSUserInterfaceItemIdentifier(remote)
+        iconButton.toolTip = "Elegí el símbolo y el color de esta cuenta: se usan en Finder, en la barra lateral y en Nimbo."
         browse.toolTip = "Buscá y mirá los archivos de esta cuenta dentro de Nimbo, sin descargarlos."
-        let body = NimboUI.vstack([NimboUI.hstack(header, spacing: 12), bar, capacity, hairline] + local + [NimboUI.hstack([finder, browse, NSView()])], spacing: 10)
+        let body = NimboUI.vstack([NimboUI.hstack(header, spacing: 12), bar, capacity, hairline] + local + [NimboUI.hstack([finder, browse, NSView(), iconButton])], spacing: 10)
         body.setCustomSpacing(16, after: body.arrangedSubviews[0])
         body.setCustomSpacing(14, after: hairline)
         return NimboGlassCard(body, padding: 18, tone: state.needsSignIn ? .normal : .raised)
@@ -1344,6 +1347,40 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableViewD
                 }
             }
         }
+    }
+    @objc func chooseAccountIcon(_ sender: NSButton) {
+        guard let remote = sender.identifier?.rawValue else { return }
+        let current = NimboFinderIcon.style(for: remote)
+        let symbols = NSPopUpButton(frame: NSRect(x: 0, y: 34, width: 260, height: 26), pullsDown: false)
+        for (name, symbol) in NimboFinderIcon.symbols {
+            symbols.addItem(withTitle: name)
+            symbols.lastItem?.image = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)
+            symbols.lastItem?.representedObject = symbol
+            if symbol == current.symbol { symbols.select(symbols.lastItem) }
+        }
+        let colors = NSPopUpButton(frame: NSRect(x: 0, y: 0, width: 260, height: 26), pullsDown: false)
+        for (name, hex) in NimboFinderIcon.colors {
+            colors.addItem(withTitle: name)
+            colors.lastItem?.image = NSImage(size: NSSize(width: 12, height: 12), flipped: false) { r in NimboPalette.rgb(hex).setFill(); NSBezierPath(ovalIn: r).fill(); return true }
+            colors.lastItem?.tag = Int(hex)
+            if hex == current.color { colors.select(colors.lastItem) }
+        }
+        let box = NSView(frame: NSRect(x: 0, y: 0, width: 260, height: 60)); box.addSubview(symbols); box.addSubview(colors)
+        let alert = NSAlert()
+        alert.messageText = "Ícono de «\(displayName(for: remote))»"
+        alert.informativeText = "Se usa en la carpeta de Finder, en la barra lateral y en Nimbo."
+        alert.accessoryView = box
+        alert.addButton(withTitle: "Guardar"); alert.addButton(withTitle: "Cancelar")
+        guard alert.runModal() == .alertFirstButtonReturn, let symbol = symbols.selectedItem?.representedObject as? String,
+              let hex = colors.selectedItem.map({ UInt32($0.tag) }) else { return }
+        NimboFinderIcon.setStyle(symbol, hex, for: remote)
+        if let controller = nativeController(for: remote) {
+            Task { if let url = try? await controller.client.location() { await MainActor.run {
+                NimboFinderIcon.apply(to: url, remote: remote, force: true)
+                NimboFinderIcon.addToSidebar(url, name: self.displayName(for: remote), remote: remote, force: true)
+            } } }
+        }
+        rebuildAccountSidebar(); renderDashboard(); updateBrowserHeading()
     }
     @objc func showConflicts() {
         let page = NimboGradientView(); page.transparent = true
@@ -1558,7 +1595,7 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableViewD
         if let existing=accountNativeControllers[remote] { return existing }
         guard remote != "GoogleDrive" else { return nativeController }
         let safe=remote.replacingOccurrences(of:" ",with:"-")
-        let client=NativeClient(identifier:"google-drive-account-"+safe,name:"Google Drive · "+alias(for: remote),remoteName:remote)
+        let client=NativeClient(identifier:"google-drive-account-"+safe,name: displayName(for: remote),remoteName:remote)
         let controller=NativeController(config:config,client:client)
         configureNativeSelection(controller,remote:remote)
         accountNativeControllers[remote]=controller
@@ -1809,7 +1846,10 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableViewD
                 finderDrive.isEnabled = true
                 finderStatus.stringValue = "Google Drive nativo disponible · conservar/liberar en Finder"
             } else {
-                startFinder()
+                // First run on this Mac: turn on the File Provider location
+                // (on-demand files, states and right-click), never the old
+                // read-only network volume.
+                UserDefaults.standard.set(true, forKey: "NimboNativeEnabled.google-drive")
             }
         }
     }
@@ -1959,8 +1999,13 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableViewD
             NSWorkspace.shared.open(native)
             return
         }
-        if let url = finderBridge.mountURL { NSWorkspace.shared.open(url) }
-        else { startFinder() }
+        // Not in Finder yet: connect the native location and open it when ready.
+        guard let controller = nativeController else { return }
+        controller.onConnected = { [weak controller] in
+            controller?.onConnected = nil
+            Task { if let url = try? await controller?.client.location() { await MainActor.run { _ = NSWorkspace.shared.open(url) } } }
+        }
+        controller.connect(reimport: false)
     }
     @objc func disconnectFinder() {
         finderDisconnect.isEnabled = false
@@ -2654,7 +2699,8 @@ final class App: NSObject, NSApplicationDelegate, NSWindowDelegate, NSTableViewD
                         self.renderConnectionList()
                         self.status.stringValue = "Autorización completada para \(remoteName). Actualizá su catálogo para empezar a buscar."
                         // A new account gets its own place in Finder right away.
-                        if remoteName != "GoogleDrive", let controller = self.nativeController(for: remoteName) {
+                        // Also the first account: without this a fresh Mac never got its Finder location.
+                        if let controller = remoteName == "GoogleDrive" ? self.nativeController : self.nativeController(for: remoteName) {
                             controller.onConnected = { [weak controller] in guard let controller else { return }; controller.onConnected = nil; Task { if let url = try? await controller.client.location() { await MainActor.run { _ = NSWorkspace.shared.open(url) } } } }
                             controller.connect(reimport: false)
                         }

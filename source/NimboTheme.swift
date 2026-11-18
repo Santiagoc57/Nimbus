@@ -188,15 +188,26 @@ extension NSPopUpButton {
 /// own folder. Finder stores it in a local "Icon\r" file that the File
 /// Provider extension excludes from sync, so nothing is uploaded to Drive.
 enum NimboFinderIcon {
-    static func image() -> NSImage {
+    /// Symbol and colour chosen for an account («Ícono…» in Inicio). Default: blue cloud.
+    static let symbols: [(String, String)] = [("Nube", "cloud.fill"), ("Básquet", "basketball.fill"), ("Fútbol", "soccerball"), ("Trabajo", "briefcase.fill"),
+        ("Casa", "house.fill"), ("Estrella", "star.fill"), ("Cámara", "camera.fill"), ("Música", "music.note"), ("Corazón", "heart.fill"), ("Carpeta", "folder.fill")]
+    static let colors: [(String, UInt32)] = [("Azul", 0x2F7BF6), ("Naranja", 0xF28C28), ("Verde", 0x10A877), ("Violeta", 0x6D4DFF), ("Rojo", 0xE5484D), ("Gris", 0x5B6478)]
+    static func style(for remote: String) -> (symbol: String, color: UInt32) {
+        let raw = UserDefaults.standard.string(forKey: "NimboAccountIcon." + remote) ?? ""
+        let parts = raw.split(separator: "|")
+        if parts.count == 2, let hex = UInt32(parts[1], radix: 16) { return (String(parts[0]), hex) }
+        return ("cloud.fill", 0x2F7BF6)
+    }
+    static func setStyle(_ symbol: String, _ color: UInt32, for remote: String) {
+        UserDefaults.standard.set(symbol + "|" + String(color, radix: 16), forKey: "NimboAccountIcon." + remote)
+    }
+    static func image(symbol: String = "cloud.fill", color: UInt32 = 0x2F7BF6) -> NSImage {
         let size = NSSize(width: 512, height: 512)
         return NSImage(size: size, flipped: false) { rect in
             let config = NSImage.SymbolConfiguration(pointSize: 360, weight: .regular)
-            guard let symbol = NSImage(systemSymbolName: "cloud.fill", accessibilityDescription: nil)?.withSymbolConfiguration(config) else { return false }
-            let tinted = NSImage(size: symbol.size, flipped: false) { r in
-                symbol.draw(in: r)
-                NimboPalette.rgb(0x2F7BF6).set(); r.fill(using: .sourceAtop)
-                return true
+            guard let glyph = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?.withSymbolConfiguration(config) else { return false }
+            let tinted = NSImage(size: glyph.size, flipped: false) { r in
+                glyph.draw(in: r); NimboPalette.rgb(color).set(); r.fill(using: .sourceAtop); return true
             }
             let s = tinted.size, scale = min(rect.width * 0.92 / s.width, rect.height * 0.92 / s.height)
             let w = s.width * scale, h = s.height * scale
@@ -204,27 +215,31 @@ enum NimboFinderIcon {
             return true
         }
     }
-    /// Monochrome cloud for the Finder sidebar (Finder tints it like its own icons).
-    static func sidebarIconFile() -> URL? {
+    /// Account folder icon in Finder (stored in a local "Icon\r" file that is never uploaded).
+    static func apply(to folder: URL, remote: String? = nil, force: Bool = false) {
+        let style = remote.map { self.style(for: $0) } ?? ("cloud.fill", 0x2F7BF6)
+        let key = "NimboFinderIconApplied." + folder.path
+        let signature = style.0 + String(style.1)
+        guard force || UserDefaults.standard.string(forKey: key) != signature else { return }
+        if NSWorkspace.shared.setIcon(image(symbol: style.0, color: style.1), forFile: folder.path, options: []) { UserDefaults.standard.set(signature, forKey: key) }
+    }
+    /// Monochrome symbol for the Finder sidebar (Finder tints it like its own icons).
+    static func sidebarIconFile(symbol: String = "cloud.fill") -> URL? {
         let support = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0].appendingPathComponent("Nimbo")
-        let file = support.appendingPathComponent("SidebarCloud.icns")
+        try? FileManager.default.createDirectory(at: support, withIntermediateDirectories: true)
+        let file = support.appendingPathComponent("Sidebar-" + symbol + ".icns")
         if FileManager.default.fileExists(atPath: file.path) { return file }
         guard let destination = CGImageDestinationCreateWithURL(file as CFURL, "com.apple.icns" as CFString, 2, nil) else { return nil }
         for size in [32, 64] {
             let image = NSImage(size: NSSize(width: size, height: size), flipped: false) { rect in
                 let config = NSImage.SymbolConfiguration(pointSize: CGFloat(size) * 0.62, weight: .medium)
-                guard let symbol = NSImage(systemSymbolName: "cloud.fill", accessibilityDescription: nil)?.withSymbolConfiguration(config) else { return false }
-                let s = symbol.size
-                symbol.draw(in: NSRect(x: (rect.width - s.width) / 2, y: (rect.height - s.height) / 2, width: s.width, height: s.height))
+                guard let glyph = NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?.withSymbolConfiguration(config) else { return false }
+                let s = glyph.size
+                glyph.draw(in: NSRect(x: (rect.width - s.width) / 2, y: (rect.height - s.height) / 2, width: s.width, height: s.height))
                 return true
             }
             if let cg = image.cgImage(forProposedRect: nil, context: nil, hints: nil) { CGImageDestinationAddImage(destination, cg, nil) }
         }
         return CGImageDestinationFinalize(destination) ? file : nil
-    }
-    static func apply(to folder: URL) {
-        let key = "NimboFinderIconApplied." + folder.path
-        guard !UserDefaults.standard.bool(forKey: key) else { return }
-        if NSWorkspace.shared.setIcon(image(), forFile: folder.path, options: []) { UserDefaults.standard.set(true, forKey: key) }
     }
 }

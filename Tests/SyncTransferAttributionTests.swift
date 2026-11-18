@@ -24,7 +24,7 @@ import AppKit
             }
             let config=scenario.appendingPathComponent("rclone.conf")
             try Data("[AccountA]\ntype = alias\nremote = \(cloud.path)\nscope = drive\n[AccountB]\ntype = alias\nremote = \(cloud.path)\nscope = drive\n".utf8).write(to:config)
-            let engine=try SyncEngine(root:scenario.appendingPathComponent("state"),offlineRoot:scenario.appendingPathComponent("offline"),config:config,binary:URL(fileURLWithPath:"/Users/santiagoimac/Applications/Nimbo.app/Contents/Resources/rclone"),testing:true)
+            let engine=try SyncEngine(root:scenario.appendingPathComponent("state"),offlineRoot:scenario.appendingPathComponent("offline"),config:config,binary:URL(fileURLWithPath:"../vendor/rclone"),testing:true)
             let a=try engine.add(remote:"AccountA",item:CloudItem(Path:"A",Name:"Folder A",Size:0,IsDir:true))
             let b=try engine.add(remote:"AccountB",item:CloudItem(Path:"B",Name:"Folder B",Size:0,IsDir:true))
             try engine.setPaused(a,true)
