@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Conectar Google Drive · Nimbo</title>
+<style>
+:root{color-scheme:light dark}body{font:16px/1.55 system-ui,sans-serif;max-width:46rem;margin:3rem auto;padding:0 1.25rem}h1{line-height:1.15}h2{margin-top:2rem;font-size:1.3rem}li{margin:.6rem 0}a{color:LinkText}code{overflow-wrap:anywhere}
+</style>
+<main>
+<h1>Conectar Google Drive a Nimbo</h1>
+<h2>Agregar otra cuenta</h2>
+<ol>
+<li>En Nimbo, elegí <strong>Agregar cuenta…</strong> y escribí el alias que querés ver en la barra lateral y en Finder.</li>
+<li>Dejá marcada <strong>Permitir crear, modificar y eliminar archivos desde Finder</strong> si querés hacer cambios. Desmarcala para usar sólo lectura. Ambos modos permiten explorar archivos bajo demanda.</li>
+<li>Si ya tenés un cliente de Google configurado, pulsá <strong>Continuar en Google</strong>. Elegí la cuenta que querés conectar y revisá sus permisos. Podés reutilizar el mismo proyecto para varias cuentas.</li>
+<li>Al volver, abrí la cuenta por su alias. <strong>Actualizar catálogo</strong> consulta nombres y rutas. Finder descarga el contenido de los archivos que abrís o elegís conservar en el Mac.</li>
+</ol>
+<h2>Usar tu propio cliente de Google</h2>
+<p>Elegí <strong>Configurar Google…</strong> en la primera conexión o <strong>Usar mi cliente de Google…</strong> al agregar otra cuenta. Si ya descargaste el JSON de un cliente de escritorio, arrastralo a la ventana o pulsá <strong>Elegir JSON…</strong>.</p>
+<ol>
+<li>Elegí o creá un proyecto. <a href="https://console.cloud.google.com/projectcreate">Abrir Google Cloud</a></li>
+<li>Habilitá Google Drive API en ese proyecto. <a href="https://console.cloud.google.com/apis/library/drive.googleapis.com">Abrir la API</a></li>
+<li>Configurá el nombre, el correo de soporte y la audiencia. Si el proyecto es externo y está en pruebas, agregá como usuario de prueba el correo exacto con el que vas a iniciar sesión. Después completá la conexión desde Nimbo. <a href="https://console.cloud.google.com/auth/audience">Abrir Audiencia</a></li>
+<li>En Acceso a los datos, declará el alcance que vas a usar. Elegí <code>https://www.googleapis.com/auth/drive.readonly</code> para consultar y descargar, o <code>https://www.googleapis.com/auth/drive</code> para permitir cambios. <a href="https://console.cloud.google.com/auth/scopes">Abrir Acceso a los datos</a></li>
+<li>Creá un cliente OAuth de tipo <strong>Aplicación de escritorio</strong> y descargá el JSON. <a href="https://console.cloud.google.com/auth/clients">Abrir Clientes</a></li>
+<li>Importá el JSON en Nimbo o pegá su ID y su secreto. Pulsá <strong>Continuar en Google</strong>. Google te mostrará la cuenta y los permisos antes de conectarla.</li>
+</ol>
+<h2>Si Google bloquea la conexión</h2>
+<p>Comprobá que Google Cloud muestre el proyecto del JSON que importaste y que el navegador esté usando la cuenta deseada. Si la cuenta es de trabajo, el administrador de Google Workspace puede tener que permitir la aplicación.</p>
+<p>La configuración guardada por Nimbo está cifrada en tu Mac. El JSON que descargaste contiene el secreto del cliente. Guardalo en un lugar privado.</p>
+<p><a href="https://developers.google.com/workspace/guides/configure-oauth-consent">Consentimiento y usuarios de prueba</a> · <a href="https://developers.google.com/workspace/drive/api/guides/api-specific-auth">Permisos de Google Drive</a></p>
+</main>
+</html>

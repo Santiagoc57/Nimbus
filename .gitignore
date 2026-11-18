@@ -1,0 +1,10 @@
+# Compilación
+Nimbo.app/
+.build/
+/nimbo
+*.o
+# rclone se descarga con scripts/fetch-rclone.sh
+vendor/
+# Resultados de pruebas y sistema
+*_TESTS.json
+.DS_Store
