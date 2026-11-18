@@ -37,6 +37,17 @@ void NimboSetFinderFavorite(CFURLRef url, CFStringRef name, CFURLRef iconFile) {
 #pragma clang diagnostic pop
     }
     // Remove any earlier entry for the same folder so the new name/icon apply.
+    NimboRemoveFinderFavorites(url);
+    LSSharedFileListItemRef added = LSSharedFileListInsertItemURL(list, kLSSharedFileListItemLast, name, icon, url, NULL, NULL);
+    if (added) CFRelease(added);
+    if (icon) ReleaseIconRef(icon);
+    CFRelease(list);
+}
+
+// Removes every favorite whose location resolves to url.
+void NimboRemoveFinderFavorites(CFURLRef url) {
+    LSSharedFileListRef list = LSSharedFileListCreate(NULL, kLSSharedFileListFavoriteItems, NULL);
+    if (!list) return;
     UInt32 seed = 0;
     CFArrayRef items = LSSharedFileListCopySnapshot(list, &seed);
     if (items) {
@@ -50,8 +61,5 @@ void NimboSetFinderFavorite(CFURLRef url, CFStringRef name, CFURLRef iconFile) {
         }
         CFRelease(items);
     }
-    LSSharedFileListItemRef added = LSSharedFileListInsertItemURL(list, kLSSharedFileListItemLast, name, icon, url, NULL, NULL);
-    if (added) CFRelease(added);
-    if (icon) ReleaseIconRef(icon);
     CFRelease(list);
 }

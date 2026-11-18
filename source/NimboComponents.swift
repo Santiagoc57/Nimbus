@@ -388,8 +388,49 @@ extension NimboFinderIcon {
     static func addToSidebar(_ folder: URL, name: String, remote: String? = nil, force: Bool = false) {
         let symbol = remote.map { style(for: $0).symbol } ?? "cloud.fill"
         let key = "NimboSidebarFavorite." + folder.path
-        guard force || UserDefaults.standard.string(forKey: key) != name + "|" + symbol else { return }
-        NimboSetFinderFavorite(folder as CFURL, name as CFString, sidebarIconFile(symbol: symbol) as CFURL?)
-        UserDefaults.standard.set(name + "|" + symbol, forKey: key)
+        let signature = name + "|" + symbol + "|link"
+        guard force || UserDefaults.standard.string(forKey: key) != signature else { return }
+        // Recent macOS ignores the name passed with a favorite and shows a File
+        // Provider folder under the app's name («Nimbo»). A favorite that points
+        // at a link named after the account shows that name instead.
+        let link = sidebarLink(to: folder, name: name)
+        NimboRemoveFinderFavorites(folder as CFURL)
+        for stale in sidebarLinks(to: folder) where stale != link {
+            NimboRemoveFinderFavorites(stale as CFURL)
+            try? FileManager.default.removeItem(at: stale)
+        }
+        NimboSetFinderFavorite((link ?? folder) as CFURL, name as CFString, sidebarIconFile(symbol: symbol) as CFURL?)
+        UserDefaults.standard.set(signature, forKey: key)
+    }
+
+    private static var sidebarLinkFolder: URL {
+        FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("Nimbo/Sidebar", isDirectory: true)
+    }
+
+    /// Links in the sidebar folder that point at this account folder.
+    private static func sidebarLinks(to folder: URL) -> [URL] {
+        let fm = FileManager.default
+        let items = (try? fm.contentsOfDirectory(at: sidebarLinkFolder, includingPropertiesForKeys: nil)) ?? []
+        return items.filter { (try? fm.destinationOfSymbolicLink(atPath: $0.path)) == folder.path }
+    }
+
+    /// A link named after the account that points at its folder, or nil if it cannot be made.
+    private static func sidebarLink(to folder: URL, name: String) -> URL? {
+        let fm = FileManager.default
+        let safe = name.replacingOccurrences(of: "/", with: "-").replacingOccurrences(of: ":", with: "-")
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !safe.isEmpty, !safe.hasPrefix(".") else { return nil }
+        try? fm.createDirectory(at: sidebarLinkFolder, withIntermediateDirectories: true)
+        var link = sidebarLinkFolder.appendingPathComponent(safe)
+        var number = 2
+        while let target = try? fm.destinationOfSymbolicLink(atPath: link.path), target != folder.path {
+            link = sidebarLinkFolder.appendingPathComponent("\(safe) \(number)")
+            number += 1
+        }
+        if (try? fm.destinationOfSymbolicLink(atPath: link.path)) == folder.path { return link }
+        if fm.fileExists(atPath: link.path) { return nil }
+        do { try fm.createSymbolicLink(at: link, withDestinationURL: folder) } catch { return nil }
+        return link
     }
 }
