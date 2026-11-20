@@ -54,6 +54,17 @@ func nativeSafeName(_ name:String)->String {
 }
 /// Inverse of `nativeSafeName` for names coming back from Finder. Without it
 /// a Drive name such as "14:52:06.jpg" was re-uploaded as "14%3A52%3A06.jpg".
+/// Scratch files apps write while saving (Adobe "Name.14162.156415", "~$x.docx",
+/// "x.tmp", "x.part", "x.crdownload", "x.sb-…"). They are renamed or deleted
+/// seconds later; uploading them races the rename and leaves conflict copies.
+/// macOS calls createItem again if one is renamed to a normal name.
+func nativeIsTemporaryName(_ name:String)->Bool {
+    let lower=name.lowercased()
+    if name.hasPrefix("~$") || name.hasPrefix(".~lock.") { return true }
+    for ext in [".tmp",".temp",".part",".partial",".crdownload",".download",".swp"] where lower.hasSuffix(ext) { return true }
+    if lower.range(of:#"\.sb-[0-9a-f]{8}-[a-z0-9]{6}$"#,options:.regularExpression) != nil { return true }
+    return name.range(of:#"\.[0-9]{3,}\.[0-9]{3,}$"#,options:.regularExpression) != nil
+}
 func nativeDriveName(_ local:String)->String {
     if local=="%2E" { return "." }
     if local=="%2E%2E" { return ".." }
@@ -544,7 +555,7 @@ final class NativeConnectionService:NSObject,NSFileProviderServiceSource,NSXPCLi
                 guard await backend.isWritable() else{throw DriveFailure.denied}
                 guard itemTemplate.contentType != .symbolicLink else{throw NativeMutationFailure.unsupported}
                 // "Icon\r" holds the custom Finder icon Nimbo sets on each account folder.
-                if itemTemplate.filename==".DS_Store" || itemTemplate.filename=="Icon\r" || itemTemplate.filename.hasPrefix("._") {throw NSError(domain:NSFileProviderErrorDomain,code:NSFileProviderError.excludedFromSync.rawValue)}
+                if itemTemplate.filename==".DS_Store" || itemTemplate.filename=="Icon\r" || itemTemplate.filename.hasPrefix("._") || nativeIsTemporaryName(itemTemplate.filename) {throw NSError(domain:NSFileProviderErrorDomain,code:NSFileProviderError.excludedFromSync.rawValue)}
                 // Google documents are exposed as .webloc links to their Drive
                 // URL. When macOS re-submits one (e.g. `.mayAlreadyExist` after
                 // a remount) map it back to the existing document instead of
